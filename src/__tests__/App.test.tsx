@@ -21,6 +21,32 @@ vi.mock("../lib/persistence", () => ({
   },
 }));
 
+// Mock logger
+vi.mock("../lib/api", () => ({
+  logger: {
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+  },
+}));
+
+// Mock all page components
+vi.mock("../pages/Index", () => ({
+  default: () => <div data-testid="index-page">Index Page</div>,
+}));
+
+vi.mock("../pages/Dashboard", () => ({
+  default: () => <div data-testid="dashboard-page">Dashboard Page</div>,
+}));
+
+vi.mock("../pages/NotFound", () => ({
+  default: () => <div data-testid="not-found-page">Not Found Page</div>,
+}));
+
+vi.mock("../components/Navigation", () => ({
+  default: () => <div data-testid="navigation">Navigation</div>,
+}));
+
 // Mock react-router-dom
 const mockNavigate = vi.fn();
 vi.mock("react-router-dom", async () => {
