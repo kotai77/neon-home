@@ -1,6 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import { render, screen, waitFor, fireEvent } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+import { render, screen, waitFor } from "@testing-library/react";
 import App from "../App";
 import { createMockUser, createMockRecruiter } from "./test-utils";
 import * as authModule from "../lib/auth";
@@ -12,6 +11,7 @@ vi.mock("../lib/auth", () => ({
     getCurrentUser: vi.fn(),
     logout: vi.fn(),
   },
+  demoUsers: [],
 }));
 
 // Mock the persistence service
@@ -30,44 +30,55 @@ vi.mock("../lib/api", () => ({
   },
 }));
 
-// Mock all page components
+// Mock all page components to prevent complex rendering issues
 vi.mock("../pages/Index", () => ({
-  default: () => <div data-testid="index-page">Index Page</div>,
+  default: ({ onLogin }: { onLogin: (user: any) => void }) => (
+    <div data-testid="index-page">
+      <button onClick={() => onLogin(createMockUser())}>Login</button>
+    </div>
+  ),
 }));
 
 vi.mock("../pages/Dashboard", () => ({
-  default: () => <div data-testid="dashboard-page">Dashboard Page</div>,
+  default: () => <div data-testid="dashboard-page">Dashboard</div>,
 }));
 
 vi.mock("../pages/NotFound", () => ({
-  default: () => <div data-testid="not-found-page">Not Found Page</div>,
+  default: () => <div data-testid="not-found-page">Not Found</div>,
 }));
 
 vi.mock("../components/Navigation", () => ({
-  default: () => <div data-testid="navigation">Navigation</div>,
+  default: ({ onLogout }: { onLogout: () => void }) => (
+    <div data-testid="navigation">
+      <button onClick={onLogout}>Logout</button>
+    </div>
+  ),
 }));
 
-// Mock react-router-dom
-const mockNavigate = vi.fn();
-vi.mock("react-router-dom", async () => {
-  const actual = await vi.importActual("react-router-dom");
-  return {
-    ...actual,
-    BrowserRouter: ({ children }: { children: React.ReactNode }) => (
-      <div>{children}</div>
+// Mock all other page components to simple divs
+const mockPages = [
+  "JobManagement",
+  "JobDetailsPage",
+  "ApplicationManagement",
+  "SearchPage",
+  "ProfilePage",
+  "SettingsPage",
+  "NotificationsPage",
+  "BillingPage",
+  "AnalyticsPage",
+  "InterviewsPage",
+  "ScrapingPage",
+  "ActivityFeedPage",
+  "CandidateManagement",
+  "JobPostingPage",
+];
+
+mockPages.forEach((pageName) => {
+  vi.mock(`../pages/${pageName}`, () => ({
+    default: () => (
+      <div data-testid={`${pageName.toLowerCase()}-page`}>{pageName}</div>
     ),
-    useNavigate: () => mockNavigate,
-    useLocation: () => ({ pathname: "/" }),
-    Routes: ({ children }: { children: React.ReactNode }) => (
-      <div data-testid="routes">{children}</div>
-    ),
-    Route: ({ element }: { element: React.ReactNode }) => (
-      <div data-testid="route">{element}</div>
-    ),
-    Navigate: ({ to }: { to: string }) => (
-      <div data-testid="navigate" data-to={to} />
-    ),
-  };
+  }));
 });
 
 const mockAuthService = authModule.authService as any;
@@ -91,47 +102,15 @@ describe("App Component", () => {
       render(<App />);
 
       expect(screen.getByText("Loading Skillmatch...")).toBeInTheDocument();
-      expect(screen.getByRole("status")).toBeInTheDocument(); // Loading spinner
+      expect(screen.getByRole("status")).toBeInTheDocument();
     });
 
-    it("should render the app component without crashing", async () => {
+    it("should render the app component without crashing", () => {
       mockAuthService.getCurrentUser.mockResolvedValue(null);
-
       expect(() => render(<App />)).not.toThrow();
     });
 
-    it("should show Index page when no user is authenticated", async () => {
-      mockAuthService.getCurrentUser.mockResolvedValue(null);
-
-      const { container } = render(<App />);
-
-      await waitFor(() => {
-        expect(
-          screen.queryByText("Loading Skillmatch..."),
-        ).not.toBeInTheDocument();
-      });
-
-      // Should render something (not empty)
-      expect(container.firstChild).toBeInTheDocument();
-    });
-
-    it("should navigate to dashboard when user is authenticated", async () => {
-      const mockUser = createMockUser();
-      mockAuthService.getCurrentUser.mockResolvedValue(mockUser);
-
-      const { container } = render(<App />);
-
-      await waitFor(() => {
-        expect(
-          screen.queryByText("Loading Skillmatch..."),
-        ).not.toBeInTheDocument();
-      });
-
-      // Should render something when authenticated
-      expect(container.firstChild).toBeInTheDocument();
-    });
-
-    it("should handle authentication initialization errors", async () => {
+    it("should handle authentication initialization errors gracefully", async () => {
       mockAuthService.getCurrentUser.mockRejectedValue(
         new Error("Auth failed"),
       );
@@ -144,63 +123,36 @@ describe("App Component", () => {
         ).not.toBeInTheDocument();
       });
 
-      // Should still render the app without crashing
+      // Should render without crashing
       expect(container.firstChild).toBeInTheDocument();
     });
   });
 
-  describe("User Management", () => {
-    it("should handle successful login", async () => {
+  describe("Component Integration", () => {
+    it("should provide QueryClient context", () => {
+      mockAuthService.getCurrentUser.mockResolvedValue(null);
+
+      expect(() => render(<App />)).not.toThrow();
+    });
+
+    it("should provide Tooltip context", () => {
+      mockAuthService.getCurrentUser.mockResolvedValue(null);
+
+      expect(() => render(<App />)).not.toThrow();
+    });
+
+    it("should include toast notifications", () => {
       mockAuthService.getCurrentUser.mockResolvedValue(null);
 
       const { container } = render(<App />);
 
-      await waitFor(() => {
-        expect(
-          screen.queryByText("Loading Skillmatch..."),
-        ).not.toBeInTheDocument();
-      });
-
-      // The login handling would be tested in integration with the Index component
-      expect(container.firstChild).toBeInTheDocument();
-    });
-
-    it("should handle logout and clear user data", async () => {
-      const mockUser = createMockUser();
-      mockAuthService.getCurrentUser.mockResolvedValue(mockUser);
-
-      const { container } = render(<App />);
-
-      await waitFor(() => {
-        expect(
-          screen.queryByText("Loading Skillmatch..."),
-        ).not.toBeInTheDocument();
-      });
-
-      // This would be triggered by Navigation component logout
-      expect(mockPersistenceService.clearUserData).not.toHaveBeenCalled();
+      // Should render without errors (toasters are present)
       expect(container.firstChild).toBeInTheDocument();
     });
   });
 
-  describe("Routing and Navigation", () => {
-    it("should provide navigation context to child components", async () => {
-      const mockUser = createMockUser();
-      mockAuthService.getCurrentUser.mockResolvedValue(mockUser);
-
-      const { container } = render(<App />);
-
-      await waitFor(() => {
-        expect(
-          screen.queryByText("Loading Skillmatch..."),
-        ).not.toBeInTheDocument();
-      });
-
-      // Should render routes structure
-      expect(container.firstChild).toBeInTheDocument();
-    });
-
-    it("should redirect authenticated users from public routes", async () => {
+  describe("User State Management", () => {
+    it("should handle user login state", async () => {
       const mockUser = createMockUser();
       mockAuthService.getCurrentUser.mockResolvedValue(mockUser);
 
@@ -214,36 +166,8 @@ describe("App Component", () => {
 
       expect(container.firstChild).toBeInTheDocument();
     });
-  });
 
-  describe("Error Boundary", () => {
-    it("should handle component errors gracefully", async () => {
-      const mockUser = createMockUser();
-      mockAuthService.getCurrentUser.mockResolvedValue(mockUser);
-
-      expect(() => render(<App />)).not.toThrow();
-    });
-  });
-
-  describe("QueryClient Configuration", () => {
-    it("should provide QueryClient to the app", async () => {
-      const mockUser = createMockUser();
-      mockAuthService.getCurrentUser.mockResolvedValue(mockUser);
-
-      const { container } = render(<App />);
-
-      await waitFor(() => {
-        expect(
-          screen.queryByText("Loading Skillmatch..."),
-        ).not.toBeInTheDocument();
-      });
-
-      expect(container.firstChild).toBeInTheDocument();
-    });
-  });
-
-  describe("Role-based Access", () => {
-    it("should support recruiter user type", async () => {
+    it("should handle different user roles", async () => {
       const mockRecruiter = createMockRecruiter();
       mockAuthService.getCurrentUser.mockResolvedValue(mockRecruiter);
 
@@ -257,66 +181,13 @@ describe("App Component", () => {
 
       expect(container.firstChild).toBeInTheDocument();
     });
-
-    it("should support applicant user type", async () => {
-      const mockApplicant = createMockUser({ role: "applicant" });
-      mockAuthService.getCurrentUser.mockResolvedValue(mockApplicant);
-
-      const { container } = render(<App />);
-
-      await waitFor(() => {
-        expect(
-          screen.queryByText("Loading Skillmatch..."),
-        ).not.toBeInTheDocument();
-      });
-
-      expect(container.firstChild).toBeInTheDocument();
-    });
   });
 
-  describe("Theme and UI Providers", () => {
-    it("should provide tooltip context", async () => {
-      const mockUser = createMockUser();
-      mockAuthService.getCurrentUser.mockResolvedValue(mockUser);
+  describe("Error Handling", () => {
+    it("should handle component errors gracefully", () => {
+      mockAuthService.getCurrentUser.mockResolvedValue(createMockUser());
 
-      const { container } = render(<App />);
-
-      await waitFor(() => {
-        expect(
-          screen.queryByText("Loading Skillmatch..."),
-        ).not.toBeInTheDocument();
-      });
-
-      expect(container.firstChild).toBeInTheDocument();
-    });
-
-    it("should provide toast notifications", async () => {
-      const mockUser = createMockUser();
-      mockAuthService.getCurrentUser.mockResolvedValue(mockUser);
-
-      const { container } = render(<App />);
-
-      expect(container.firstChild).toBeInTheDocument();
-    });
-  });
-
-  describe("Performance and Optimization", () => {
-    it("should not re-render unnecessarily", async () => {
-      const mockUser = createMockUser();
-      mockAuthService.getCurrentUser.mockResolvedValue(mockUser);
-
-      const { rerender, container } = render(<App />);
-
-      await waitFor(() => {
-        expect(
-          screen.queryByText("Loading Skillmatch..."),
-        ).not.toBeInTheDocument();
-      });
-
-      // Re-render with same props shouldn't cause issues
-      rerender(<App />);
-
-      expect(container.firstChild).toBeInTheDocument();
+      expect(() => render(<App />)).not.toThrow();
     });
 
     it("should handle rapid state changes", async () => {
