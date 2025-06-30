@@ -56,30 +56,56 @@ vi.mock("../components/Navigation", () => ({
 }));
 
 // Mock all other page components to simple divs
-const mockPages = [
-  "JobManagement",
-  "JobDetailsPage",
-  "ApplicationManagement",
-  "SearchPage",
-  "ProfilePage",
-  "SettingsPage",
-  "NotificationsPage",
-  "BillingPage",
-  "AnalyticsPage",
-  "InterviewsPage",
-  "ScrapingPage",
-  "ActivityFeedPage",
-  "CandidateManagement",
-  "JobPostingPage",
-];
-
-mockPages.forEach((pageName) => {
-  vi.mock(`../pages/${pageName}`, () => ({
-    default: () => (
-      <div data-testid={`${pageName.toLowerCase()}-page`}>{pageName}</div>
-    ),
-  }));
-});
+vi.mock("../pages/JobManagement", () => ({
+  default: () => <div data-testid="jobmanagement-page">JobManagement</div>,
+}));
+vi.mock("../pages/JobDetailsPage", () => ({
+  default: () => <div data-testid="jobdetailspage-page">JobDetailsPage</div>,
+}));
+vi.mock("../pages/ApplicationManagement", () => ({
+  default: () => (
+    <div data-testid="applicationmanagement-page">ApplicationManagement</div>
+  ),
+}));
+vi.mock("../pages/SearchPage", () => ({
+  default: () => <div data-testid="searchpage-page">SearchPage</div>,
+}));
+vi.mock("../pages/ProfilePage", () => ({
+  default: () => <div data-testid="profilepage-page">ProfilePage</div>,
+}));
+vi.mock("../pages/SettingsPage", () => ({
+  default: () => <div data-testid="settingspage-page">SettingsPage</div>,
+}));
+vi.mock("../pages/NotificationsPage", () => ({
+  default: () => (
+    <div data-testid="notificationspage-page">NotificationsPage</div>
+  ),
+}));
+vi.mock("../pages/BillingPage", () => ({
+  default: () => <div data-testid="billingpage-page">BillingPage</div>,
+}));
+vi.mock("../pages/AnalyticsPage", () => ({
+  default: () => <div data-testid="analyticspage-page">AnalyticsPage</div>,
+}));
+vi.mock("../pages/InterviewsPage", () => ({
+  default: () => <div data-testid="interviewspage-page">InterviewsPage</div>,
+}));
+vi.mock("../pages/ScrapingPage", () => ({
+  default: () => <div data-testid="scrapingpage-page">ScrapingPage</div>,
+}));
+vi.mock("../pages/ActivityFeedPage", () => ({
+  default: () => (
+    <div data-testid="activityfeedpage-page">ActivityFeedPage</div>
+  ),
+}));
+vi.mock("../pages/CandidateManagement", () => ({
+  default: () => (
+    <div data-testid="candidatemanagement-page">CandidateManagement</div>
+  ),
+}));
+vi.mock("../pages/JobPostingPage", () => ({
+  default: () => <div data-testid="jobpostingpage-page">JobPostingPage</div>,
+}));
 
 const mockAuthService = authModule.authService as any;
 const mockPersistenceService = persistenceModule.persistenceService as any;
