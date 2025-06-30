@@ -1,0 +1,149 @@
+version: "3.8"
+
+services:
+  # Main API server
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    ports:
+      - "3001:3001"
+    environment:
+      - NODE_ENV=development
+      - PORT=3001
+      - DATABASE_URL=/app/data/skillmatch.db
+      - JWT_SECRET=development-jwt-secret-change-in-production
+      - REDIS_URL=redis://redis:6379
+      - LOG_LEVEL=info
+      - FRONTEND_URL=http://localhost:5173
+    volumes:
+      - api_data:/app/data
+      - api_logs:/app/logs
+      - api_uploads:/app/uploads
+    depends_on:
+      - redis
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # Redis for caching and sessions
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Background worker for processing jobs
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    environment:
+      - NODE_ENV=development
+      - DATABASE_URL=/app/data/skillmatch.db
+      - JWT_SECRET=development-jwt-secret-change-in-production
+      - REDIS_URL=redis://redis:6379
+      - LOG_LEVEL=info
+    volumes:
+      - api_data:/app/data
+      - api_logs:/app/logs
+      - api_uploads:/app/uploads
+    depends_on:
+      - redis
+      - api
+    command: ["node", "workers/index.js"]
+    restart: unless-stopped
+
+  # Frontend development server (optional)
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    ports:
+      - "5173:5173"
+    environment:
+      - VITE_API_URL=http://localhost:3001/api
+    volumes:
+      - .:/app
+      - /app/node_modules
+    depends_on:
+      - api
+    restart: unless-stopped
+
+  # Database backup service
+  backup:
+    image: alpine:latest
+    volumes:
+      - api_data:/data
+      - ./backups:/backups
+    environment:
+      - BACKUP_SCHEDULE=0 2 * * * # Daily at 2 AM
+    command: |
+      sh -c '
+        apk add --no-cache sqlite dcron
+        echo "$$BACKUP_SCHEDULE cp /data/skillmatch.db /backups/skillmatch-backup-$$(date +%Y%m%d-%H%M%S).db" | crontab -
+        crond -f
+      '
+    restart: unless-stopped
+
+  # Monitoring with Prometheus (optional)
+  prometheus:
+    image: prom/prometheus:latest
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--web.console.libraries=/etc/prometheus/console_libraries"
+      - "--web.console.templates=/etc/prometheus/consoles"
+      - "--storage.tsdb.retention.time=200h"
+      - "--web.enable-lifecycle"
+    restart: unless-stopped
+
+  # Grafana for visualization (optional)
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards
+      - ./monitoring/grafana/datasources:/etc/grafana/provisioning/datasources
+    restart: unless-stopped
+
+volumes:
+  api_data:
+    driver: local
+  api_logs:
+    driver: local
+  api_uploads:
+    driver: local
+  redis_data:
+    driver: local
+  prometheus_data:
+    driver: local
+  grafana_data:
+    driver: local
+
+networks:
+  default:
+    driver: bridge
