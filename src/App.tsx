@@ -193,7 +193,7 @@ const App = () => {
                 path="/"
                 element={
                   user ? (
-                    <Navigate to="/dashboard" replace />
+                    <Navigate to="/dashboard" replace data-testid="navigate" />
                   ) : (
                     <Index onLogin={handleLogin} />
                   )
