@@ -53,7 +53,7 @@ const ProtectedRoute = ({
 }) => {
   if (!user) {
     logger.warn("Unauthorized access attempt - no user");
-    return <Navigate to="/" replace />;
+    return <Navigate to="/" replace data-testid="navigate" />;
   }
 
   if (requireRole && user.role !== requireRole) {
@@ -61,7 +61,7 @@ const ProtectedRoute = ({
       userRole: user.role,
       requiredRole: requireRole,
     });
-    return <Navigate to="/dashboard" replace />;
+    return <Navigate to="/dashboard" replace data-testid="navigate" />;
   }
 
   return <>{children}</>;
@@ -169,7 +169,11 @@ const App = () => {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 to-white">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand mx-auto mb-4"></div>
+          <div
+            className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand mx-auto mb-4"
+            role="status"
+            aria-label="Loading"
+          ></div>
           <p className="text-muted-foreground">Loading Skillmatch...</p>
         </div>
       </div>
@@ -183,7 +187,7 @@ const App = () => {
         <Sonner />
         <BrowserRouter>
           <div className="min-h-screen">
-            <Routes>
+            <Routes data-testid="routes">
               {/* Public routes */}
               <Route
                 path="/"
@@ -199,7 +203,7 @@ const App = () => {
                 path="/login"
                 element={
                   user ? (
-                    <Navigate to="/dashboard" replace />
+                    <Navigate to="/dashboard" replace data-testid="navigate" />
                   ) : (
                     <Index onLogin={handleLogin} />
                   )
@@ -209,7 +213,7 @@ const App = () => {
                 path="/register"
                 element={
                   user ? (
-                    <Navigate to="/dashboard" replace />
+                    <Navigate to="/dashboard" replace data-testid="navigate" />
                   ) : (
                     <Index onLogin={handleLogin} />
                   )
@@ -222,7 +226,7 @@ const App = () => {
                 element={
                   <div>
                     <Navigation user={user} onLogout={handleLogout} />
-                    <Routes>
+                    <Routes data-testid="nested-routes">
                       {/* Main Dashboard */}
                       <Route
                         path="/dashboard"
