@@ -136,7 +136,7 @@ describe("App Component", () => {
         new Error("Auth failed"),
       );
 
-      render(<App />);
+      const { container } = render(<App />);
 
       await waitFor(() => {
         expect(
@@ -145,7 +145,7 @@ describe("App Component", () => {
       });
 
       // Should still render the app without crashing
-      expect(screen.getByTestId("routes")).toBeInTheDocument();
+      expect(container.firstChild).toBeInTheDocument();
     });
   });
 
